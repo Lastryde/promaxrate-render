@@ -87,6 +87,9 @@ const UsersSchema = new mongoose.Schema({
   zip:{
     type:Object,
   },
+  address:{
+    type:Object,
+  },
  
   password: {
     type: String,
