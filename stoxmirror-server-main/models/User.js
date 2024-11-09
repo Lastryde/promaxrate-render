@@ -71,10 +71,11 @@ const UsersSchema = new mongoose.Schema({
   plan:{
     type:String,
   },
-  address:{
-    type:Object,
+  address: {
+    address: String,
+    city: String,
+    zip: String
   },
- 
  
   country: {
     type: String,
