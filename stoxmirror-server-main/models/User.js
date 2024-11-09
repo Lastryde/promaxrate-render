@@ -72,16 +72,16 @@ const UsersSchema = new mongoose.Schema({
     type:String,
   },
   state:{
-    type:Object,
+    type:String,
   },
  
   state:{
-    type:Object,
+    type:String,
   },
  
   city: {
     type: String,
-    required: true,
+    
   },
 
   zip:{
