@@ -19,7 +19,7 @@ function generateReferralCode(length) {
 
 
 router.post("/register", async (req, res) => {
-  const { firstName, lastName, email, password, country, referralCode,phone} = req.body;
+  const { firstName, lastName, email, password, country, referralCode,mobile} = req.body;
 
   try {
     // Check if any user has that email
@@ -54,7 +54,7 @@ router.post("/register", async (req, res) => {
       password: hashPassword(password),
       country,
       trader:"",
-      phone:phone,
+      mobile:mobile,
       amountDeposited: " You are not eligible to view livestream of ongoing trade.Kindly contact your trader or support.",
       profit: 0,
       balance: 0,
@@ -67,19 +67,12 @@ router.post("/register", async (req, res) => {
       withdrawals: [],
       planHistory: [],
      
-      accounts: {
-        eth: {
-          address: "",
-        },
-        ltc: {
-          address: "",
-        },
-        btc: {
-          address: "",
-        },
-        usdt: {
-          address: "",
-        },
+      address: {
+        state:"",
+                city: "",
+        
+        zip: "",
+        
       },
       verified: false,
       isDisabled: false,
