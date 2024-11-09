@@ -67,13 +67,11 @@ router.post("/register", async (req, res) => {
       withdrawals: [],
       planHistory: [],
      
-      address: {
         state:"",
                 city: "",
         
         zip: "",
         
-      },
       verified: false,
       isDisabled: false,
       referredUsers:[],
