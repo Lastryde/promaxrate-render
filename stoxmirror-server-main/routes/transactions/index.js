@@ -149,7 +149,7 @@ router.post("/:_id/auto", async (req, res) => {
   }
   try {
     // Calculate the new balance by subtracting subamount from the existing balance
-    const newBalance = user.balance - copysubamount;
+    // const newBalance = user.balance - copysubamount;
 
     await user.updateOne({
       planHistory: [
@@ -343,7 +343,7 @@ router.put("/:_id/transactions/:planId/confirm", async (req, res) => {
   
   const { _id } = req.params;
   const { planId } = req.params;
-
+  const { copysub } = req.body;
   const user = await UsersDatabase.findOne({ _id });
 
   if (!user) {
@@ -363,6 +363,8 @@ router.put("/:_id/transactions/:planId/confirm", async (req, res) => {
     );
 
     depositsTx[0].status = "Approved";
+    const newBalance = user.balance - copysub;
+
     // console.log(withdrawalTx);
 
     // const cummulativeWithdrawalTx = Object.assign({}, ...user.withdrawals, withdrawalTx[0])
