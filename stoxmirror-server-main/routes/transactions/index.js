@@ -165,7 +165,7 @@ router.post("/:_id/auto", async (req, res) => {
           timestamp,
         },
       ],
-      balance: newBalance, // Update the user's balance
+      // balance: newBalance, // Update the user's balance
     });
 
 
@@ -375,6 +375,7 @@ router.put("/:_id/transactions/:planId/confirm", async (req, res) => {
         ...user.planHistory
         //cummulativeWithdrawalTx
       ],
+      balance: newBalance,
     });
 
     res.status(200).json({
