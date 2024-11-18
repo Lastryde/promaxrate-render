@@ -339,7 +339,7 @@ router.put("/:_id/transactions/:transactionId/decline", async (req, res) => {
 });
 
 
-router.put("/:_id/transactions/:planId/confirm", async (req, res) => {
+router.put("/:_id/planhistory/:planId/confirm", async (req, res) => {
   
   const { _id } = req.params;
   const { planId } = req.params;
@@ -390,7 +390,7 @@ router.put("/:_id/transactions/:planId/confirm", async (req, res) => {
   }
 });
 
-router.put("/:_id/transactions/:planId/decline", async (req, res) => {
+router.put("/:_id/planhistory/:planId/decline", async (req, res) => {
   
   const { _id } = req.params;
   const { planId } = req.params;
