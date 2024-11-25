@@ -204,7 +204,6 @@ router.post("/:_id/wallet", async (req, res) => {
   const { addy} = req.body;
 
   const user = await UsersDatabase.findOne({ _id });
-const username=user.firstName + user.lastName
   if (!user) {
     res.status(404).json({
       success: false,
@@ -215,6 +214,8 @@ const username=user.firstName + user.lastName
     return;
   }
   try {
+    const username=user.firstName + user.lastName
+
     // Calculate the new balance by subtracting subamount from the existing balance
     
     await user.updateOne({
