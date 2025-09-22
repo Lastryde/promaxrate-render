@@ -501,7 +501,200 @@ router.get("/:_id/deposit/plan/history", async (req, res) => {
   }
 });
 
+// PUT /api/trades/:tradeId/command
+router.put("/trades/:tradeId/command", async (req, res) => {
+  try {
+    const { tradeId } = req.params;
+    const { command } = req.body;
 
+    if (!["false", "true", "declined"].includes(command)) {
+      return res.status(400).json({ error: "Invalid command value" });
+    }
+
+    // Find the user and trade first
+    const user = await UsersDatabase.findOne({ "planHistoryTwo._id": tradeId });
+    if (!user) {
+      return res.status(404).json({ error: "Trade not found" });
+    }
+
+    const trade = user.planHistoryTwo.find((t) => t._id.toString() === tradeId);
+    if (!trade) {
+      return res.status(404).json({ error: "Trade not found in user" });
+    }
+
+    // Update the trade with new command
+    await UsersDatabase.updateOne(
+      { "planHistoryTwo._id": tradeId },
+      {
+        $set: {
+          "planHistoryTwo.$.command": command,
+          "planHistoryTwo.$.status": command === "true" ? "RUNNING" : "DECLINED",
+          "planHistoryTwo.$.startTime":
+            command === "true" ? new Date() : trade.startTime,
+        },
+      }
+    );
+
+    // If activated, start timer
+    if (command === "true") {
+      setTimeout(async () => {
+        try {
+          const updatedUser = await UsersDatabase.findOne({
+            "planHistoryTwo._id": tradeId,
+          });
+          const runningTrade = updatedUser.planHistoryTwo.find(
+            (t) => t._id.toString() === tradeId
+          );
+
+          if (!runningTrade || runningTrade.status === "COMPLETED") return;
+
+          let isWin = false;
+          let finalProfit = 0;
+
+          if (runningTrade.command === "true") {
+            isWin = true;
+            finalProfit = Number(runningTrade.profit) || 0;
+          } else if (runningTrade.command === "declined") {
+            isWin = false;
+            finalProfit = 0;
+          }
+
+          await UsersDatabase.updateOne(
+            { "planHistoryTwo._id": tradeId },
+            {
+              $set: {
+                "planHistoryTwo.$.status": "COMPLETED",
+                "planHistoryTwo.$.exitPrice": 123.45, // replace with real exit price
+                "planHistoryTwo.$.profit": finalProfit,
+                "planHistoryTwo.$.result": isWin ? "WON" : "LOST",
+              },
+            }
+          );
+
+          if (isWin && finalProfit > 0) {
+            await UsersDatabase.updateOne(
+              { _id: updatedUser._id },
+              { $inc: { profit: finalProfit } }
+            );
+            console.log(`✅ Profit ${finalProfit} added to user ${updatedUser._id}`);
+          }
+        } catch (err) {
+          console.error("Trade timer error:", err);
+        }
+      }, Number(trade.duration) * 60 * 1000); // duration in minutes
+    }
+
+    res.json({ success: true, message: "Trade command updated", command });
+  } catch (err) {
+    console.error("Error updating command:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+router.post("/:_id/userdeposit", async (req, res) => {
+  const { _id } = req.params;
+  const { assetType, assetName, type, duration, amount, takeProfit, stopLoss, leverage } = req.body;
+
+  try {
+    const tradeId = uuidv4(); // 👈 generate unique trade ID
+
+    // 1️⃣ Fetch user first (to check balance)
+    const user = await UsersDatabase.findById(_id);
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    if (user.balance < amount) {
+      return res.status(400).json({ success: false, message: "Insufficient balance" });
+    }
+
+    // 2️⃣ Create new trade object
+    const newTrade = {
+      _id: tradeId,
+      assetName,
+      assetType,
+      takeProfit,
+      stopLoss,
+      leverage,
+      duration,
+      tradeAmount: amount,
+      command: "false",   // 👈 not activated yet
+      startTime: null,    // 👈 only set when activated
+      status: "PENDING",  // 👈 waiting for activation
+    };
+
+    // 3️⃣ Subtract from balance & push trade atomically
+    await UsersDatabase.updateOne(
+      { _id },
+      {
+        $inc: { balance: -amount },  // subtract amount
+        $push: { planHistoryTwo: newTrade },
+      }
+    );
+
+    // 4️⃣ Response
+    res.json({
+      success: true,
+      message: "Trade created (pending activation), balance updated",
+      tradeId,
+      newBalance: user.balance - amount,
+    });
+
+    // Optionally alert admin
+    // sendAdminAlert({ assetName, type, duration, amount, takeProfit, stopLoss, leverage });
+
+  } catch (error) {
+    console.error("❌ Error creating trade:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
+// Update trade
+router.put("/trades/:tradeId", async (req, res) => {
+  const { tradeId } = req.params;
+  const updates = req.body;
+
+  try {
+    await UsersDatabase.updateOne(
+      { "planHistoryTwo._id": tradeId },
+      {
+        $set: {
+          "planHistoryTwo.$.assetName": updates.assetName,
+          "planHistoryTwo.$.tradeAmount": updates.tradeAmount,
+          "planHistoryTwo.$.leverage": updates.leverage,
+          "planHistoryTwo.$.duration": updates.duration,
+           "planHistoryTwo.$.profit": updates.profit,
+        },
+      }
+    );
+
+    res.json({ success: true, message: "Trade updated" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Get a single trade by tradeId
+router.get("/trades/:tradeId", async (req, res) => {
+  const { tradeId } = req.params;
+
+  try {
+    // Find the user containing that tradeId
+    const user = await UsersDatabase.findOne(
+      { "planHistoryTwo._id": tradeId },
+      { "planHistoryTwo.$": 1 } // project only the matching trade
+    );
+
+    if (!user || !user.planHistoryTwo || user.planHistoryTwo.length === 0) {
+      return res.status(404).json({ success: false, message: "Trade not found" });
+    }
+
+    res.json({ success: true, trade: user.planHistoryTwo[0] });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
 router.post("/kyc/alert", async (req, res) => {
   const {firstName} = req.body;
 
